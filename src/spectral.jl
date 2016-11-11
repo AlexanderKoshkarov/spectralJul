@@ -32,10 +32,13 @@ function funLin(t ,state ::Array{Complex{Float64},3},dState ::Array{Complex{Floa
     # do I need pre-allocation?
     phi = muInv.*(eta .- n).*invLap
     chi = theta.*invLap
+    nl1 = fft( ifft(n).*ifft(theta) .+ ifft(ddx.*n).*ifft(ddx.*chi) .+ ifft(ddy.*n).*ifft(ddy.*chi) )
+    nl2 = fft( ifft(ddx.*theta).*ifft(ddx.*chi) .+ ifft(ddy.*theta).*ifft(ddy.*chi) )
+    nl3 = fft( ifft(ddx.*phi).*ifft(ddy.*n) .- ifft(ddy.*phi).*ifft(ddx.*n) )
 
-    dState[:,:,1] .= -v0.*ddx.*n     .+ theta
-    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n
-    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi
+    dState[:,:,1] .= -v0.*ddx.*n     .+ theta                           .+ nl1 .- Dv.*n
+    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n                        .+ nl2 .- Dv.*theta
+    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi  .+ nl3 .- Dv.*eta
 
     return nothing
 end
@@ -66,7 +69,7 @@ logen(kx,ky) = [ log(abs(s[sp.kToIndex(kx,sp.Nkx),sp.kToIndex(ky,sp.Nky),1])) fo
 
 gamas = zeros(Float64,1+sp.Nkx,1+sp.Nky)
 
-tMin = 5000
+tMin = 50
 for kx = 0:sp.Nkx, ky = 0:sp.Nky
     gamas[kx+1,ky+1] = linear_fit(t[tMin:end],logen(kx,ky)[tMin:end])[2]
 end
