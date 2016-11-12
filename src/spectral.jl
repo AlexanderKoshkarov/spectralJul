@@ -14,8 +14,11 @@ const Nky = 31
 const Nx  = 2*Nkx+1
 const Ny  = 2*Nky+1
 
-const Lx    = 7*pi
-const Ly    = 7*pi
+const Lx    = 5*pi
+const Ly    = 10*pi
+
+const dt       = 0.0001
+const outputFr = 1000
 
 indexToK(x :: Int,Nk :: Int) = x <= Nk + 1 ? x - 1 : x - 2*Nk -2
 kToIndex(k :: Int,Nk :: Int) = k >= 0      ? k + 1 : 2*Nk + 2 + k
@@ -34,26 +37,26 @@ function funLin(t ,state ::Array{Complex{Float64},3},dState ::Array{Complex{Floa
     # do I need pre-allocation?
     phi = muInv.*(eta .- n).*invLap
     chi = theta.*invLap
-    nl1 = fft( ifft(deal.*n).*ifft(deal.*theta) .+ ifft(deal.*ddx.*n).*ifft(deal.*ddx.*chi) .+ ifft(deal.*ddy.*n).*ifft(deal.*ddy.*chi) )
-    nl2 = fft( ifft(deal.*ddx.*theta).*ifft(deal.*ddx.*chi) .+ ifft(deal.*ddy.*theta).*ifft(deal.*ddy.*chi) )
-    nl3 = fft( ifft(deal.*ddx.*phi).*ifft(deal.*ddy.*n) .- ifft(deal.*ddy.*phi).*ifft(deal.*ddx.*n) )
+    nl1 = (1/(Nx*Ny))*fft( bfft(deal.*n).*bfft(deal.*theta) .+ bfft(deal.*ddx.*n).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*n).*bfft(deal.*ddy.*chi) )
+    nl2 = (1/(Nx*Ny))*fft( bfft(deal.*ddx.*theta).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*theta).*bfft(deal.*ddy.*chi) )
+    nl3 = (1/(Nx*Ny))*fft( bfft(deal.*ddx.*phi).*bfft(deal.*ddy.*n) .- bfft(deal.*ddy.*phi).*bfft(deal.*ddx.*n) )
 
-    dState[:,:,1] .= -v0.*ddx.*n     .+ theta                           .+ nl1 .- Dv.*n
-    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n                        .+ nl2 .- Dv.*theta
-    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi  .+ nl3 .- Dv.*eta
+    dState[:,:,1] .= -v0.*ddx.*n     .+ theta                           .+ nl1 .- Dv.*Lap.*Lap.*n
+    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n                        .+ nl2 .- Dv.*Lap.*Lap.*theta
+    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi  .+ nl3 .- Dv.*Lap.*Lap.*eta
 
     return nothing
 end
 
 #initial conditions
 state0  = zeros(Complex{Float64},Nx,Ny,3)
-kx0s = kToIndex.(vcat(1:5,-(1:5)),Nkx)
-ky0s = kToIndex.(vcat(1:5,-(1:5)),Nky)
-state0[kx0s,ky0s,1] .= 0.001
+kx0s = kToIndex.(vcat(1:2,-(1:2)),Nkx)
+ky0s = kToIndex.(vcat(1:2,-(1:2)),Nky)
+state0[kx0s,ky0s,1] .= 0.0001
 
 prob = ODEProblem(funLin,state0)
 
-sol = solve(prob,[0,30],Δt=0.0001,adaptive=false,maxiters=10^6,timeseries_steps = 1000,alg_hints=[:stiff])
+sol = solve(prob,[0,30],Δt=dt,adaptive=false,maxiters=10^6,timeseries_steps = outputFr)
 
 end
 
@@ -70,6 +73,10 @@ logen()      = [ log(sum(abs(s))) for s in sol ]
 en = logen()
 
 plot(t,en)
+
+#anim = @animate for i=1:129
+#       plot(fftshift(abs(sol[i][:,:,1])),st=:contourf)
+#       end
 
 #gamas = zeros(Float64,1+sp.Nkx,1+sp.Nky)
 #
