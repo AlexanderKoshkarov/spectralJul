@@ -9,16 +9,16 @@ const nu      = 0.1826
 const muInv   = 491.0
 const Dv      = 0.0001
 
-const Nkx = 31
-const Nky = 31
+const Nkx = 63
+const Nky = 63
 const Nx  = 2*Nkx+1
 const Ny  = 2*Nky+1
 
-const Lx    = 5*pi
-const Ly    = 10*pi
+const Lx    = 8*pi
+const Ly    = 8*pi
 
-const dt       = 0.0001
-const outputFr = 1000
+const dt       = 0.001
+const outputFr = 100
 
 indexToK(x :: Int,Nk :: Int) = x <= Nk + 1 ? x - 1 : x - 2*Nk -2
 kToIndex(k :: Int,Nk :: Int) = k >= 0      ? k + 1 : 2*Nk + 2 + k
@@ -37,26 +37,32 @@ function funLin(t ,state ::Array{Complex{Float64},3},dState ::Array{Complex{Floa
     # do I need pre-allocation?
     phi = muInv.*(eta .- n).*invLap
     chi = theta.*invLap
-    nl1 = (1/(Nx*Ny))*fft( bfft(deal.*n).*bfft(deal.*theta) .+ bfft(deal.*ddx.*n).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*n).*bfft(deal.*ddy.*chi) )
-    nl2 = (1/(Nx*Ny))*fft( bfft(deal.*ddx.*theta).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*theta).*bfft(deal.*ddy.*chi) )
+    #nl1 = (1/(Nx*Ny))*fft( bfft(deal.*n).*bfft(deal.*theta) .+ bfft(deal.*ddx.*n).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*n).*bfft(deal.*ddy.*chi) )
+    #nl2 = (1/(Nx*Ny))*fft( bfft(deal.*ddx.*theta).*bfft(deal.*ddx.*chi) .+ bfft(deal.*ddy.*theta).*bfft(deal.*ddy.*chi) )
     nl3 = (1/(Nx*Ny))*fft( bfft(deal.*ddx.*phi).*bfft(deal.*ddy.*n) .- bfft(deal.*ddy.*phi).*bfft(deal.*ddx.*n) )
 
-    dState[:,:,1] .= -v0.*ddx.*n     .+ theta                           .+ nl1 .- Dv.*Lap.*Lap.*n
-    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n                        .+ nl2 .- Dv.*Lap.*Lap.*theta
-    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi  .+ nl3 .- Dv.*Lap.*Lap.*eta
+    dState[:,:,1] .= -v0.*ddx.*n     .+ theta                           .- Dv.*Lap.*Lap.*n      #.+ nl1
+    dState[:,:,2] .= -v0.*ddx.*theta .+ eta .- n                        .- Dv.*Lap.*Lap.*theta  #.+ nl2
+    dState[:,:,3] .= -u0.*ddy.*eta   .- nu.*(eta .- n) .- vn.*ddy.*phi  .- Dv.*Lap.*Lap.*eta    .+ nl3
 
     return nothing
 end
 
 #initial conditions
 state0  = zeros(Complex{Float64},Nx,Ny,3)
-kx0s = kToIndex.(vcat(1:2,-(1:2)),Nkx)
-ky0s = kToIndex.(vcat(1:2,-(1:2)),Nky)
-state0[kx0s,ky0s,1] .= 0.0001
+for ky = 4:10, kx = -10:10 
+    x  = kToIndex( kx,Nkx)
+    y  = kToIndex( ky,Nky)
+    my = kToIndex(-ky,Nky)
+    state0[x,y,1]  = 0.0001*rand(Complex128)
+    state0[x,my,1] = conj(state0[x,y,1])
+end
+
+
 
 prob = ODEProblem(funLin,state0)
 
-sol = solve(prob,[0,30],Δt=dt,adaptive=false,maxiters=10^6,timeseries_steps = outputFr)
+sol = solve(prob,[0,30],Δt=dt,adaptive=false,maxiters=10^10,timeseries_steps = outputFr)
 
 end
 
