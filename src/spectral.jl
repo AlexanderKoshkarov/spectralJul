@@ -17,7 +17,8 @@ const Ny  = 2*Nky+1
 const Lx    = 8*pi
 const Ly    = 8*pi
 
-const dt       = 0.001
+const tspan    = (0.0,1.0)
+#const dt       = 0.001
 const outputFr = 100
 
 indexToK(x :: Int,Nk :: Int) = x <= Nk + 1 ? x - 1 : x - 2*Nk -2
@@ -27,7 +28,6 @@ const ddx    = Complex{Float64}[ 2*pi*im*indexToK(x,Nkx)/Lx for x in 1:Nx, y in 
 const ddy    = Complex{Float64}[ 2*pi*im*indexToK(y,Nky)/Ly for x in 1:Nx, y in 1:Ny]
 const Lap    = ddx.*ddx .+ ddy.*ddy
 const invLap = Complex{Float64}[ abs(Lap[x,y]) == 0 ? 0.0+0.0im : 1.0/Lap[x,y]  for x in 1:Nx, y in 1:Ny]
-
 const deal   = [sqrt(indexToK(x,Nkx)^2 + indexToK(y,Nky)^2 ) > (2/3)*min(Nkx,Nky) ? 0 : 1 for x in 1:Nx, y in 1:Ny]
 
 function funLin(t ,state ::Array{Complex{Float64},3},dState ::Array{Complex{Float64},3})
@@ -50,7 +50,7 @@ end
 
 #initial conditions
 state0  = zeros(Complex{Float64},Nx,Ny,3)
-for ky = 4:10, kx = -10:10 
+for ky = 4:10, kx = -10:10
     x  = kToIndex( kx,Nkx)
     y  = kToIndex( ky,Nky)
     my = kToIndex(-ky,Nky)
@@ -60,9 +60,10 @@ end
 
 
 
-prob = ODEProblem(funLin,state0)
+prob = ODEProblem(funLin,state0,tspan)
 
-sol = solve(prob,[0,30],Δt=dt,adaptive=false,maxiters=10^10,timeseries_steps = outputFr)
+#sol = solve(prob,Δt=dt,adaptive=false,maxiters=10^10,timeseries_steps = outputFr)
+sol = solve(prob,RK4)
 
 end
 
@@ -94,3 +95,20 @@ plot(t,en)
 #kxs = 2*pi*collect(0:sp.Nkx)/sp.Lx
 #kys = 2*pi*collect(0:sp.Nky)/sp.Ly
 #plot(kxs,kys,gamas,st=:contourf)
+
+
+
+julia> include("src/spectral.jl")
+ERROR: LoadError: MethodError: no method matching Array{Complex{Float64},3}()
+Closest candidates are:
+  Array{Complex{Float64},3}{T,N}(::Tuple{Vararg{Int64,N}}) at boot.jl:310
+  Array{Complex{Float64},3}{T}(::Int64, ::Int64, ::Int64) at boot.jl:316
+  Array{Complex{Float64},3}{T}(::Any) at sysimg.jl:53
+ in macro expansion at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/integrators/integrator_utils.jl:79 [inlined]
+ in ode_solve(::OrdinaryDiffEq.ODEIntegrator{DiffEqBase.RK4,Array{Complex{Float64},3},Complex{Float64},4,Float64,Complex{Float64},Float64,Array{Complex{Float64},3},Array{Complex{Float64},3},sp.#funLin,OrdinaryDiffEq.#ODE_DEFAULT_NORM,OrdinaryDiffEq.#ODE_DEFAULT_CALLBACK,OrdinaryDiffEq.#ODE_DEFAULT_ISOUTOFDOMAIN}) at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/integrators/fixed_timestep_integrators.jl:116
+ in #solve#47(::Float64, ::Bool, ::Int64, ::DiffEqBase.ExplicitRKTableau, ::Bool, ::Void, ::Symbol, ::Bool, ::Bool, ::Array{Float64,1}, ::Array{Float64,1}, ::Bool, ::Float64, ::Rational{Int64}, ::Rational{Int64}, ::Void, ::Void, ::Rational{Int64}, ::Bool, ::Void, ::Void, ::Int64, ::Float64, ::Float64, ::Bool, ::OrdinaryDiffEq.#ODE_DEFAULT_NORM, ::OrdinaryDiffEq.#ODE_DEFAULT_ISOUTOFDOMAIN, ::Bool, ::Int64, ::String, ::Void, ::Array{Any,1}, ::DiffEqBase.#solve, ::DiffEqBase.ODEProblem{Array{Complex{Float64},3},Float64,true,sp.#funLin}, ::Type{DiffEqBase.RK4}, ::Array{Any,1}, ::Array{Any,1}, ::Array{Any,1}) at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/solve.jl:182
+ in solve(::DiffEqBase.ODEProblem{Array{Complex{Float64},3},Float64,true,sp.#funLin}, ::Type{DiffEqBase.RK4}, ::Array{Any,1}, ::Array{Any,1}, ::Array{Any,1}) at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/solve.jl:19 (repeats 2 times)
+ in eval_user_input(::Any, ::Base.REPL.REPLBackend) at ./REPL.jl:64
+ in macro expansion at ./REPL.jl:95 [inlined]
+ in (::Base.REPL.##3#4{Base.REPL.REPLBackend})() at ./event.jl:68
+while loading /home/kosh/jul/spectralJul/src/spectral.jl, in expression starting on line 66
