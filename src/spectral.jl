@@ -117,3 +117,16 @@ import sp
 #kys = 2*pi*collect(0:sp.Nky)/sp.Ly
 #plot(kxs,kys,gamas,st=:contourf)
 
+julia> include("src/spectral.jl")
+WARNING: replacing module sp
+ERROR: LoadError: MethodError: Cannot `convert` an object of type Type{DiffEqBase.CVODE_BDF} to an object of type Array{Array{Float64,1},1}
+This may have arisen from a call to the constructor Array{Array{Float64,1},1}(...),
+since type constructors fall back to convert methods.
+ in #solve#51(::Float64, ::Bool, ::Int64, ::DiffEqBase.ExplicitRKTableau, ::Bool, ::Void, ::Symbol, ::Bool, ::Bool, ::Array{Float64,1}, ::Array{Float64,1}, ::Bool, ::Float64, ::Rational{Int64}, ::Rational{Int64}, ::Void, ::Void, ::Rational{Int64}, ::Bool, ::Void, ::Void, ::Int64, ::Float64, ::Float64, ::Bool, ::OrdinaryDiffEq.#ODE_DEFAULT_NORM, ::OrdinaryDiffEq.#ODE_DEFAULT_ISOUTOFDOMAIN, ::Bool, ::Int64, ::String, ::Void, ::Array{Any,1}, ::DiffEqBase.#solve, ::DiffEqBase.ODEProblem{Array{Float64,1},Float64,true,sp.#wrapFun}, ::Type{DiffEqBase.Tsit5}, ::DataType, ::Array{Any,1}, ::Array{Any,1}) at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/solve.jl:155
+ in solve(::DiffEqBase.ODEProblem{Array{Float64,1},Float64,true,sp.#wrapFun}, ::Type{DiffEqBase.Tsit5}, ::DataType, ::Array{Any,1}, ::Array{Any,1}) at /home/kosh/.julia/v0.5/OrdinaryDiffEq/src/solve.jl:19 (repeats 2 times)
+ in #solve#99(::Array{Any,1}, ::Function, ::DiffEqBase.ODEProblem{Array{Float64,1},Float64,true,sp.#wrapFun}, ::Type{T}, ::Vararg{Type{T},N}) at /home/kosh/.julia/v0.5/DiffEqBase/src/DiffEqBase.jl:54
+ in solve(::DiffEqBase.ODEProblem{Array{Float64,1},Float64,true,sp.#wrapFun}, ::Type{T}) at /home/kosh/.julia/v0.5/DiffEqBase/src/DiffEqBase.jl:53
+ in eval_user_input(::Any, ::Base.REPL.REPLBackend) at ./REPL.jl:64
+ in macro expansion at ./REPL.jl:95 [inlined]
+ in (::Base.REPL.##3#4{Base.REPL.REPLBackend})() at ./event.jl:68
+while loading /home/kosh/jul/spectralJul/src/spectral.jl, in expression starting on line 77
