@@ -1,6 +1,6 @@
 module sp
 
-using DifferentialEquations, ForwardDiff
+using DifferentialEquations, Plots
 
 const v0      = 0.353
 const u0      = 11.7
@@ -9,15 +9,15 @@ const nu      = 0.1826
 const muInv   = 491.0
 const Dv      = 0.0001
 
-const Nkx = 63
-const Nky = 63
+const Nkx = 15
+const Nky = 15
 const Nx  = 2*Nkx+1
 const Ny  = 2*Nky+1
 
 const Lx    = 8*pi
 const Ly    = 8*pi
 
-const tspan    = (0.0,30.0)
+const tspan    = (0.0,1.0)
 outputN        = 31
 #const dt       = 0.001
 #const outputFr = 100
@@ -25,10 +25,10 @@ outputN        = 31
 indexToK(x :: Int,Nk :: Int) = x <= Nk + 1 ? x - 1 : x - 2*Nk -2
 kToIndex(k :: Int,Nk :: Int) = k >= 0      ? k + 1 : 2*Nk + 2 + k
 
-const ddx    = Complex{Float64}[ 2*pi*im*indexToK(x,Nkx)/Lx for x in 1:Nx, y in 1:Ny]
-const ddy    = Complex{Float64}[ 2*pi*im*indexToK(y,Nky)/Ly for x in 1:Nx, y in 1:Ny]
+const ddx    = Complex128[ 2*pi*im*indexToK(x,Nkx)/Lx for x in 1:Nx, y in 1:Ny]
+const ddy    = Complex128[ 2*pi*im*indexToK(y,Nky)/Ly for x in 1:Nx, y in 1:Ny]
 const Lap    = ddx.*ddx .+ ddy.*ddy
-const invLap = Complex{Float64}[ abs(Lap[x,y]) == 0 ? 0.0+0.0im : 1.0/Lap[x,y]  for x in 1:Nx, y in 1:Ny]
+const invLap = Complex128[ abs(Lap[x,y]) == 0 ? 0.0+0.0im : 1.0/Lap[x,y]  for x in 1:Nx, y in 1:Ny]
 const deal   = [sqrt(indexToK(x,Nkx)^2 + indexToK(y,Nky)^2 ) > (2/3)*min(Nkx,Nky) ? 0 : 1 for x in 1:Nx, y in 1:Ny]
 
 function funLin(t ,state ,dState )
@@ -49,9 +49,22 @@ function funLin(t ,state ,dState )
     return nothing
 end
 
+
+#fromVec(u :: Array{Float64,1}   ) :: Array{Complex128,3} = reshape(reinterpret(Complex128,u),Nx,Ny,3)
+#toVec(  u :: Array{Complex128,3}) :: Array{Float64,1}    = reinterpret(Float64,vec(u))
+
+fromVec(u)  = reshape(reinterpret(Complex128,u),Nx,Ny,3)
+toVec(  u)  = reinterpret(Float64,vec(u))
+
+
+
+function wrapFun(t, u, du)
+    funLin(t,fromVec(u),fromVec(du))
+end
+
 #initial conditions
-state0  = zeros(Complex{Float64},Nx,Ny,3)
-for ky = 4:10, kx = -10:10
+state0  = zeros(Complex128,Nx,Ny,3)
+for ky = 4:10, kx = [-10,-9,9,10]
     x  = kToIndex( kx,Nkx)
     y  = kToIndex( ky,Nky)
     my = kToIndex(-ky,Nky)
@@ -59,28 +72,34 @@ for ky = 4:10, kx = -10:10
     state0[x,my,1] = conj(state0[x,y,1])
 end
 
+prob = ODEProblem(wrapFun,toVec(state0),tspan)
 
-
-prob = ODEProblem(funLin,state0,tspan)
-
-#maxiters=10^10
-sol = solve(prob,Vern7,saveat=linspace(tspan...,outputN),save_timeseries=false)
+sol = solve(prob,CVODE_BDF)
+#my_callback = @ode_callback begin
+#  if iter % 300 == 0
+#    @show t
+#    @show sum(abs(u))
+#    #display(plot(fftshift(abs(u[:,:,1])),st=:contourf))
+#  end
+#  @ode_savevalues
+#end
+#sol = solve(prob,CVODE_BDF,saveat=linspace(tspan...,outputN),save_timeseries=false,callback=my_callback)
 
 
 end
 
 import sp
 
-using Plots
-using CurveFit
+#using Plots
+#using CurveFit
 
-t   = sp.sol.t
-sol = sp.sol[:]
-#
-#logen(kx,ky) = [ log(abs(s[sp.kToIndex(kx,sp.Nkx),sp.kToIndex(ky,sp.Nky),1])) for s in sol]
+#t   = sp.sol.t
+#sol = sp.sol[:]
+##
+##logen(kx,ky) = [ log(abs(s[sp.kToIndex(kx,sp.Nkx),sp.kToIndex(ky,sp.Nky),1])) for s in sol]
 #logen()      = [ log(sum(abs(s))) for s in sol ]
 #en = logen()
-#
+##
 #plot(t,en)
 
 #anim = @animate for i=1:129
