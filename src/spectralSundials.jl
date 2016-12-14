@@ -32,8 +32,8 @@ const Ly    = 2*pi
 const dx = Lx/Nx
 const dy = Ly/Ny
 
-const dt = 0.01
-const nt = 10000
+const tspan = (0.0,10)
+const nt = 101
 
 # end constants
 
@@ -46,7 +46,7 @@ kToIndex(k :: Int,Nk :: Int) = k >= 0      ? k + 1 : 2*Nk + 2 + k
 fromVec(u)  = reshape(reinterpret(Complex128,u),Nx,Ny,3)
 toVec(u)    = reinterpret(Float64,vec(u))
 
-immutable Rhs
+immutable Rhs <: Function
     phi :: Array{Complex128,2}
     chi :: Array{Complex128,2}
 
@@ -84,7 +84,6 @@ const hv     = Dv.*Lap.*Lap
 const invLap = Complex128[ abs(Lap[x,y]) == 0 ? 0.0+0.0im : 1.0/Lap[x,y]  for x in 1:Nx, y in 1:Ny]
 
 fun = Rhs()
-#function (fun :: Rhs)(t,u :: Array{Float64,1},du :: Array{Float64,1})
 function (fun :: Rhs)(t,u,du)
 
     state  = fromVec(u)
@@ -140,16 +139,39 @@ function (fun :: Rhs)(t,u,du)
 end
 
 #initial conditions
-state = zeros(Complex128,Nx,Ny,3)
-state[1,1,1] = 0.001
-state[1,1,2] = 0.001
+state0 = zeros(Complex128,Nx,Ny,3)
+#initial conditions
+xMesh = [ 2*pi*dx*(x-1)/Lx for x in 1:Nx, y in 1:Ny]
+yMesh = [ 2*pi*dy*(y-1)/Ly for x in 1:Nx, y in 1:Ny]
+nModes = 10
+maxMod = 10
+ampl = 0.0001
+for i = 1:nModes
+    rp1 = 2*pi*rand()
+    rp2 = 2*pi*rand()
+    rm1 = rand(-maxMod:maxMod)
+    rm2 = rand(-maxMod:maxMod)
+    rf1 = rand([sin,cos])
+    rf2 = rand([sin,cos])
+    state0[:,:,1] .= state0[:,:,1] .+ ampl.*rf1.(rm1.*xMesh .+ rp1).*rf2(rm2.*yMesh .+ rp2)
+end
+state0[:,:,1] .= nrm.*fft(state0[:,:,1])
 
 
-tspan = (0.0,1.0)
-prob = ODEProblem(fun,toVec(state),tspan)
 
-#sol = solve(prob)
-sol = solve(prob,CVODE_BDF(method=:Functional))
+
+prob = ODEProblem(fun,toVec(state0),tspan)
+
+my_callback = @ode_callback begin
+  if iter % 1 == 0
+    @show t
+    @show sum(abs2,u)
+  end
+  @ode_savevalues
+end
+
+sol = solve(prob,CVODE_BDF(method=:Functional),saveat=linspace(tspan...,nt),save_timeseries=false,callback=my_callback)
+
 
 
 
